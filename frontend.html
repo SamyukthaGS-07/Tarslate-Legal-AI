@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TARSLATE (LRV) - Legal Translation & Summarization</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Styles for Professional Look */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fc;
+        }
+        .term {
+            /* Blue highlight for legal terms */
+            color: #1e40af; /* Tailwind blue-800 */
+            text-decoration: underline dotted #3b82f6; /* Tailwind blue-500 */
+            cursor: pointer;
+            position: relative;
+        }
+        /* Fade-in animation for output */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        /* Custom Tooltip Styling */
+        .tooltip {
+            visibility: hidden;
+            position: absolute;
+            z-index: 100;
+            padding: 8px 12px;
+            background-color: #ffffff;
+            color: #1f2937; /* Tailwind gray-800 */
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
+            text-align: left;
+            font-size: 0.875rem;
+            line-height: 1.4;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            transform: translateY(5px);
+            pointer-events: none; /* Allows clicks on elements behind tooltip */
+        }
+        .term:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(-10px); /* Lift tooltip slightly above the term */
+        }
+    </style>
+</head>
+<body class="min-h-screen antialiased">
+
+    <!-- Main Application Container -->
+    <div id="app" class="flex flex-col min-h-screen">
+        
+        <!-- Role Selection Page -->
+        <div id="role-selection-page" class="flex flex-col items-center justify-center flex-grow p-4">
+            <div class="w-full max-w-xl p-8 bg-white rounded-xl shadow-2xl transition-all duration-300">
+                <h1 class="text-4xl font-extrabold text-[#0a48a8] mb-2 text-center">TARSLATE (LRV)</h1>
+                <p class="text-md text-gray-500 mb-8 text-center italic">Translate. Summarize. Understand Law.</p>
+                
+                <h2 class="text-xl font-semibold text-gray-700 mb-6 text-center">Choose your role to set the summarization complexity:</h2>
+                
+                <div id="role-options" class="space-y-4">
+                    <!-- Role Card: Lawyer -->
+                    <div data-role="lawyer" class="role-card flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer transition duration-200 hover:shadow-md hover:border-[#3b82f6]">
+                        <span class="text-3xl mr-4">👩‍⚖️</span>
+                        <div>
+                            <p class="font-bold text-lg text-gray-800">Lawyer (Expert)</p>
+                            <p class="text-sm text-gray-500">Detailed, highly precise legal terminology preserved.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Role Card: Paralegal -->
+                    <div data-role="paralegal" class="role-card flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer transition duration-200 hover:shadow-md hover:border-[#3b82f6]">
+                        <span class="text-3xl mr-4">🧾</span>
+                        <div>
+                            <p class="font-bold text-lg text-gray-800">Paralegal (Moderate)</p>
+                            <p class="text-sm text-gray-500">Moderately simplified, explains jargon but retains key concepts.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Role Card: Common Man -->
+                    <div data-role="common_man" class="role-card flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer transition duration-200 hover:shadow-md hover:border-[#3b82f6]">
+                        <span class="text-3xl mr-4">🧍</span>
+                        <div>
+                            <p class="font-bold text-lg text-gray-800">Common Man (Basic)</p>
+                            <p class="text-sm text-gray-500">Very simplified, plain language summary for clear understanding.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="continue-btn" disabled class="mt-8 w-full py-3 px-4 rounded-lg bg-gray-300 text-white font-bold transition duration-300 disabled:opacity-50">
+                    Continue to Translation
+                </button>
+            </div>
+        </div>
+
+        <!-- Translation Page (Hidden initially) -->
+        <div id="translation-page" class="hidden flex-col flex-grow">
+            <!-- Navbar -->
+            <nav class="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
+                <div class="text-2xl font-bold text-[#0a48a8]">TARSLATE (LRV)</div>
+                <div class="text-sm font-medium text-gray-600">
+                    Role: <span id="current-user-role" class="capitalize font-extrabold text-[#3b82f6]"></span>
+                    <button onclick="logout()" class="ml-4 text-xs text-gray-400 hover:text-red-500 transition duration-150"> (Change Role)</button>
+                </div>
+            </nav>
+
+            <!-- Main Content Grid -->
+            <main class="flex-grow p-4 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Input/Controls Panel -->
+                <div class="bg-white p-6 rounded-xl shadow-lg h-full">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Input & Settings</h2>
+
+                    <!-- Language Selectors -->
+                    <div class="flex space-x-4 mb-4">
+                        <div class="w-1/2">
+                            <label for="source-lang" class="block text-sm font-medium text-gray-700">Source Language</label>
+                            <select id="source-lang" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#3b82f6] focus:border-[#3b82f6] sm:text-sm rounded-md">
+                                <option value="english">English</option>
+                                <option value="tamil">Tamil</option>
+                            </select>
+                        </div>
+                        <div class="w-1/2">
+                            <label for="target-lang" class="block text-sm font-medium text-gray-700">Target Language</label>
+                            <select id="target-lang" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#3b82f6] focus:border-[#3b82f6] sm:text-sm rounded-md">
+                                <option value="tamil">Tamil</option>
+                                <option value="english">English</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Textarea Input -->
+                    <label for="input-text" class="block text-sm font-medium text-gray-700 mb-1">Enter Text (or upload file below)</label>
+                    <textarea id="input-text" rows="8" class="block w-full rounded-lg border border-gray-300 p-3 shadow-sm focus:border-[#3b82f6] focus:ring-[#3b82f6] resize-none mb-4" placeholder="Paste your legal document text here...">The court hereby dismisses the petition for summary judgment due to insufficient evidence presented by the plaintiff concerning the matter of jurisprudence. The defendant is awarded costs.</textarea>
+                    
+                    <!-- File Input -->
+                    <label for="file-upload" class="block text-sm font-medium text-gray-700 mb-1">Upload .docx File</label>
+                    <input type="file" id="file-upload" accept=".docx" class="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-[#3b82f6]
+                        hover:file:bg-blue-100 mb-4" onchange="handleFileUpload()">
+
+                    <!-- Controls -->
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center">
+                            <input id="include-summary" type="checkbox" checked class="h-4 w-4 text-[#3b82f6] border-gray-300 rounded focus:ring-[#3b82f6]">
+                            <label for="include-summary" class="ml-2 block text-sm font-medium text-gray-700">
+                                Include Summary (Role-Adaptive)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Translate Button -->
+                    <button id="translate-btn" class="w-full py-3 px-4 rounded-lg bg-[#0a48a8] text-white font-bold transition duration-300 hover:bg-[#1e40af] focus:outline-none focus:ring-4 focus:ring-[#3b82f6]/50 flex items-center justify-center" onclick="startTranslation()">
+                        <span id="btn-text">Translate</span>
+                        <!-- Loading Spinner (Hidden by default) -->
+                        <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                    
+                    <!-- Status/Error Message -->
+                    <div id="status-message" class="mt-4 p-3 hidden rounded-lg text-sm font-medium"></div>
+
+                </div>
+
+                <!-- Output Display Panel -->
+                <div class="bg-blue-50 p-6 rounded-xl shadow-lg h-full overflow-y-auto">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b border-blue-200 pb-2">Translation Output</h2>
+                    
+                    <div id="translation-output" class="text-gray-800 leading-relaxed min-h-[100px] border border-blue-200 p-4 rounded-lg bg-white transition-all duration-500">
+                        <p class="text-gray-500 italic">Translated text will appear here. Hover over highlighted terms for definitions.</p>
+                    </div>
+
+                    <!-- Summary Output -->
+                    <div id="summary-container" class="mt-6 hidden">
+                        <h3 class="text-lg font-bold text-[#0a48a8] mb-3">Role-Adaptive Summary</h3>
+                        <div id="summary-output" class="text-gray-700 leading-relaxed p-4 rounded-lg bg-blue-100 shadow-inner">
+                            <p class="text-gray-500 italic">The summary will appear here based on your selected role.</p>
+                        </div>
+                    </div>
+
+                    <!-- Terminology Table (Optional but useful) -->
+                    <div id="terms-container" class="mt-6 hidden">
+                        <h3 class="text-lg font-bold text-[#0a48a8] mb-3">Extracted Legal Terms</h3>
+                        <ul id="terms-list" class="space-y-2 p-4 rounded-lg bg-white border border-blue-200">
+                            <!-- Terms will be injected here -->
+                        </ul>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+    const API_URL = "http://127.0.0.1:8000/api/translate";
+    
+    // Page elements
+    const roleSelectionPage = document.getElementById('role-selection-page');
+    const translationPage = document.getElementById('translation-page');
+    const roleOptions = document.getElementById('role-options');
+    const continueBtn = document.getElementById('continue-btn');
+    const currentUserRoleSpan = document.getElementById('current-user-role');
+    const inputTextarea = document.getElementById('input-text');
+    const fileInput = document.getElementById('file-upload');
+    const translateBtn = document.getElementById('translate-btn');
+    const btnText = document.getElementById('btn-text');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const statusMessage = document.getElementById('status-message');
+    const translationOutput = document.getElementById('translation-output');
+    const summaryContainer = document.getElementById('summary-container');
+    const summaryOutput = document.getElementById('summary-output');
+    const termsContainer = document.getElementById('terms-container');
+    const termsList = document.getElementById('terms-list');
+    const includeSummaryCheckbox = document.getElementById('include-summary');
+
+    let selectedRole = null;
+
+    // --- Page Navigation and Role Management ---
+
+    function checkRoleAndNavigate() {
+        // ALWAYS show role selection on refresh as requested
+        roleSelectionPage.classList.remove('hidden');
+        translationPage.classList.add('hidden');
+
+        // Check if there was a previous role to pre-highlight it
+        const savedRole = localStorage.getItem("userRole");
+        if (savedRole) {
+            const savedCard = document.querySelector(`[data-role="${savedRole}"]`);
+            if (savedCard) {
+                applyRoleUI(savedRole, savedCard);
+            }
+        }
+    }
+
+    function applyRoleUI(role, card) {
+        // Reset all cards
+        roleOptions.querySelectorAll('.role-card').forEach(c => {
+            c.classList.remove('bg-blue-50', 'border-[#0a48a8]');
+            c.classList.add('bg-white', 'border-gray-200');
+        });
+        
+        // Highlight selected
+        card.classList.add('bg-blue-50', 'border-[#0a48a8]');
+        card.classList.remove('bg-white', 'border-gray-200');
+        
+        selectedRole = role;
+        continueBtn.disabled = false;
+        continueBtn.classList.remove('bg-gray-300');
+        continueBtn.classList.add('bg-[#0a48a8]', 'hover:bg-[#1e40af]');
+    }
+
+    function logout() {
+        localStorage.removeItem("userRole");
+        selectedRole = null;
+        location.reload(); // Hard reset to Page 1
+    }
+
+    window.onload = checkRoleAndNavigate;
+    
+    // Role Selection Click Listeners
+    roleOptions.querySelectorAll('.role-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const role = card.getAttribute('data-role');
+            applyRoleUI(role, card);
+        });
+    });
+
+    continueBtn.addEventListener('click', () => {
+        if (selectedRole) {
+            localStorage.setItem("userRole", selectedRole);
+            currentUserRoleSpan.textContent = selectedRole.replace('_', ' ');
+            roleSelectionPage.classList.add('hidden');
+            translationPage.classList.remove('hidden');
+        }
+    });
+
+    // --- Input Handling ---
+
+    function handleFileUpload() {
+        if (fileInput.files.length > 0) {
+            inputTextarea.value = '';
+            inputTextarea.disabled = true;
+            inputTextarea.classList.add('bg-gray-100');
+        } else {
+            inputTextarea.disabled = false;
+            inputTextarea.classList.remove('bg-gray-100');
+        }
+    }
+
+    inputTextarea.addEventListener('input', () => {
+        if (inputTextarea.value.trim() !== '') {
+            fileInput.value = null;
+            inputTextarea.disabled = false;
+        }
+    });
+
+    // --- API Call and Output Rendering ---
+    
+    function setStatus(message, isError = false) {
+        statusMessage.textContent = message;
+        statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+        statusMessage.classList.add(isError ? 'bg-red-100' : 'bg-green-100');
+        statusMessage.classList.add(isError ? 'text-red-700' : 'text-green-700');
+    }
+
+    function setLoading(isLoading) {
+        translateBtn.disabled = isLoading;
+        btnText.textContent = isLoading ? 'Processing...' : 'Translate';
+        loadingSpinner.classList.toggle('hidden', !isLoading);
+        if (isLoading) statusMessage.classList.add('hidden');
+    }
+
+    async function startTranslation() {
+        const userRole = localStorage.getItem("userRole");
+        const sourceLang = document.getElementById('source-lang').value;
+        const targetLang = document.getElementById('target-lang').value;
+        const includeSummary = includeSummaryCheckbox.checked;
+        const textContent = inputTextarea.value.trim();
+        const uploadedFile = fileInput.files[0];
+
+        if (!userRole) {
+            setStatus("Error: Please select a role first.", true);
+            return;
+        }
+
+        if (!textContent && !uploadedFile) {
+            setStatus("Error: Please enter text or upload a .docx file.", true);
+            return;
+        }
+
+        setLoading(true);
+
+        const formData = new FormData();
+        formData.append('source_language', sourceLang);
+        formData.append('target_language', targetLang);
+        formData.append('include_summary', includeSummary);
+        formData.append('user_role', userRole);
+
+        if (uploadedFile) {
+            formData.append('file', uploadedFile);
+        } else {
+            formData.append('text', textContent);
+        }
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || "Translation failed.");
+            }
+
+            renderOutput(data);
+            setStatus("Translation successful!", false);
+
+        } catch (error) {
+            setStatus(`Error: ${error.message}`, true);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function renderOutput(data) {
+        translationOutput.innerHTML = data.translated_text;
+        translationOutput.classList.add('fade-in');
+        
+        if (data.summary && data.summary !== "Summary not requested.") {
+            summaryContainer.classList.remove('hidden');
+            summaryOutput.innerHTML = data.summary;
+        } else {
+            summaryContainer.classList.add('hidden');
+        }
+
+        if (data.domain_terms && data.domain_terms.length > 0) {
+            termsContainer.classList.remove('hidden');
+            termsList.innerHTML = data.domain_terms.map(term => `
+                <li class="bg-white p-3 border-l-4 border-[#3b82f6] rounded-md shadow-sm">
+                    <span class="font-semibold text-gray-900">${term.term}</span> 
+                    <span class="text-gray-500">(${term.translation})</span>: 
+                    <span class="text-sm text-gray-700">${term.definition}</span>
+                </li>
+            `).join('');
+        }
+        
+        attachTooltipListeners();
+    }
+    
+    function attachTooltipListeners() {
+        const terms = translationOutput.querySelectorAll('.term');
+        terms.forEach(termElement => {
+            const meaning = termElement.getAttribute('data-meaning');
+            if (!termElement.querySelector('.tooltip')) {
+                const tooltip = document.createElement('span');
+                tooltip.className = 'tooltip';
+                tooltip.innerHTML = `<span class="font-bold text-[#0a48a8]">Definition:</span> ${meaning}`;
+                termElement.appendChild(tooltip);
+            }
+        });
+    }
+</script>
+</body>
+</html>
