@@ -40,3 +40,9 @@ The application follows a Client-Server architecture:
 4. Install dependencies: `pip install fastapi uvicorn google-genai pydantic python-docx httpx python-multipart`
 5. Set API Key: `set GEMINI_API_KEY=your_key_here`
 6. Run Backend: `uvicorn main_backend:app --reload`
+
+## Project Contributors
+* **Samyuktha GS**
+* **Shri Nithee V**
+* **Abiranjana S**
+* **Akshita CS**
